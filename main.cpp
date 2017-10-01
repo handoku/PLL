@@ -6,11 +6,13 @@
 #include <set>
 #include <map>
 #include <cassert>
+#include <functional>
 
 using namespace std;
 
 const int inf = 1<<29;
-
+using std::placeholders::_1;
+using std::placeholders::_2;
 class PLL
 {
 public:
@@ -96,7 +98,8 @@ bool PLL::cmp(int a, int b)
 void PLL::preparing()
 {
     for(int i=1;i<=n;i++) id[i] = i;
-    sort(id.begin() + 1, id.end());
+    auto bind_cmp = bind(&PLL::cmp, this, _1, _2);
+    sort(id.begin() + 1, id.end(),bind_cmp);
     for(int i=1;i<=n;i++){
         //cout<<"what "<<i<<endl;
         prunedBFS(i);
