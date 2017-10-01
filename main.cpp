@@ -62,6 +62,7 @@ void PLL::prunedBFS(int vk_idx)
     vector<int> vis;
     vis.push_back(vk);
     dis[vk] = 0;
+    //cout<<vis.size()<<" "<<dis[vk]<<endl;
     while(!q.empty()){
         int u = q.front(); q.pop();
         if(u != vk){
@@ -76,13 +77,14 @@ void PLL::prunedBFS(int vk_idx)
                 q.push(v);
             }
         }
+        //cout<<"s"<<endl;
     }
     cout<<vk<<"---------"<<endl;
     for(int i=1;i<=n;i++){
         for(auto t : label[i]) cout<<t.first<<"=="<<t.second<<"  ";
         cout<<endl;
     }
-    for(auto v : vis) dis[v] = inf;
+    for(int i=0; i<(int)vis.size(); i++) dis[vis[i]] = inf;
 }
 
 bool PLL::cmp(int a, int b)
@@ -95,6 +97,7 @@ void PLL::preparing()
     for(int i=1;i<=n;i++) id[i] = i;
     sort(id.begin() + 1, id.end());
     for(int i=1;i<=n;i++){
+        cout<<"what "<<i<<endl;
         prunedBFS(i);
     }
 }
@@ -109,6 +112,8 @@ int PLL::query(int u, int v)
         int dis_u_a = label[u][a].second, dis_v_b = label[v][b].second;
         if(ida == idb){
             ans = min(ans, dis_u_a + dis_v_b);
+            a ++;
+            b ++;
         }
         else if(ida <= idb){
             a++;
@@ -138,6 +143,17 @@ int main()
     return 0;
 }
 /*
+7 7
+1 2
+2 3
+2 4
+2 6
+4 5
+4 7
+6 7
+
+2
+
 12 19
 1 4
 1 6
