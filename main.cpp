@@ -5,6 +5,7 @@
 #include <queue>
 #include <set>
 #include <map>
+#include <cassert>
 
 using namespace std;
 
@@ -14,20 +15,21 @@ class PLL
 {
 public:
     PLL(){};
-    void init(int n);
-    void graph_init();
-    void preparing();
-    void prunedBFS(int vk);
-    int query(int u, int v);
-    void test();
-    bool cmp(int a, int b);
+    void init(int n); //init;
+    void graph_init(); //get graph;
+    void preparing(); //get index;
+    void prunedBFS(int vk); //BFS with prune;
+    int query_for_pruning(int u, int v); //query_1
+    int query_distance(int u, int v); //get distance answer;
+    void test(); //just for test;
+    bool cmp(int a, int b); // for sorting id;
 private:
     int n, m;
-    vector<vector<int>> edg;
-    vector<vector<pair<int, int>>> label;
-    vector<int> id;
-    vector<int> idx;
-    vector<int> dis;
+    vector<vector<int>> edg; // storing graph
+    vector<vector<pair<int, int>>> label; // index
+    vector<int> id; // for vertex
+    vector<int> dis; // storing current distance in BFS;
+    vector<int> label_vk; //storing vk's index in BFS.
 };
 
 void PLL::init(int n)
@@ -66,7 +68,7 @@ void PLL::prunedBFS(int vk_idx)
     while(!q.empty()){
         int u = q.front(); q.pop();
         if(u != vk){
-            if(query(vk, u) <= dis[u]) continue;
+            if(query_for_pruning(vk, u) <= dis[u]) continue;
             label[u].emplace_back(vk_idx,dis[u]);
         }
         for(int i=0;i<(int)edg[u].size(); i++){
@@ -77,13 +79,12 @@ void PLL::prunedBFS(int vk_idx)
                 q.push(v);
             }
         }
-        //cout<<"s"<<endl;
     }
-    cout<<vk<<"---------"<<endl;
-    for(int i=1;i<=n;i++){
-        for(auto t : label[i]) cout<<t.first<<"=="<<t.second<<"  ";
-        cout<<endl;
-    }
+//    cout<<vk<<"---------"<<endl;
+//    for(int i=1;i<=n;i++){
+//        for(auto t : label[i]) cout<<t.first<<"=="<<t.second<<"  ";
+//        cout<<endl;
+//    }
     for(int i=0; i<(int)vis.size(); i++) dis[vis[i]] = inf;
 }
 
@@ -97,12 +98,12 @@ void PLL::preparing()
     for(int i=1;i<=n;i++) id[i] = i;
     sort(id.begin() + 1, id.end());
     for(int i=1;i<=n;i++){
-        cout<<"what "<<i<<endl;
+        //cout<<"what "<<i<<endl;
         prunedBFS(i);
     }
 }
 
-int PLL::query(int u, int v)
+int PLL::query_for_pruning(int u, int v)
 {
     if(u == v) return 0;
     int a=0, b=0;
@@ -123,26 +124,79 @@ int PLL::query(int u, int v)
     return ans;
 }
 
+int PLL::query_distance(int u, int v)
+{
+    //assert(1<=u&&u<=n&&1<=v&&v<=n);
+    if(u == v) return 0;
+    int a=0, b=0;
+    int ans = inf;
+    while(a < (int)label[u].size() && b < (int)label[v].size()){
+        int ida = label[u][a].first, idb = label[v][b].first;
+        int dis_u_a = label[u][a].second, dis_v_b = label[v][b].second;
+
+        if(id[ida] == v) return dis_u_a;
+        if(id[idb] == u) return dis_v_b;
+        if(ida == idb){
+            ans = min(ans, dis_u_a + dis_v_b);
+            a ++;
+            b ++;
+        }
+        else if(ida <= idb){
+            a++;
+        }
+        else b++;
+    }
+    return ans;
+}
+
 void PLL::test()
 {
     int q, u, v;
+    for(int i=1; i<=n; i++){
+        for(int j=i+1;j<=n;j++){
+            assert(query_distance(i, j) == query_distance(j, i));
+        }
+    }
+//    for(int i=1;i<=n;i++){
+//        for(int j=i+1;j<=n;j++){
+//            cout<<query_distance(i, j)<<endl;
+//        }
+//    }
     scanf("%d", &q);
     while(q --){
         scanf("%d %d", &u, &v);
-        cout<<query(u, v)<<endl;
+        cout<<query_distance(u, v)<<endl;
     }
 }
 
 int main()
 {
+#ifdef local_test
+    freopen("in.txt", "r", stdin);
+    freopen("out.txt", "w", stdout);
+#endif // local_test
     PLL pll;
     pll.graph_init();
     pll.preparing();
     pll.test();
-    puts("sdfsdf");
     return 0;
 }
 /*
+case:
+n m
+edg1
+.
+.
+.
+edgm
+q
+query[1]
+.
+.
+.
+query[q]
+
+case 1:
 7 7
 1 2
 2 3
@@ -151,9 +205,11 @@ int main()
 4 5
 4 7
 6 7
-
 2
+1 7
+3 7
 
+case 2:
 12 19
 1 4
 1 6
