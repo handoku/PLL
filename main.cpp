@@ -75,7 +75,7 @@ void PLL::prunedBFS(int vk_idx)
         int u = q.front(); q.pop();
         if(u != vk){
             if(query_for_pruning(vk, u) <= dis[u]) {
-                cnt ++; // calculate how many times we can has pruned
+                cnt ++; // calculate how many times we has pruned
                 continue;
             }
             label[u].emplace_back(vk_idx, dis[u]);
