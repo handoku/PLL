@@ -71,7 +71,7 @@ void PLL::prunedBFS(int vk_idx)
         int u = q.front(); q.pop();
         if(u != vk){
             if(query_for_pruning(vk, u) <= dis[u]) continue;
-            label[u].emplace_back(vk_idx,dis[u]);
+            label[u].emplace_back(vk_idx, dis[u]);
         }
         for(int i=0;i<(int)edg[u].size(); i++){
             int v = edg[u][i];
@@ -97,9 +97,13 @@ bool PLL::cmp(int a, int b)
 
 void PLL::preparing()
 {
-    for(int i=1;i<=n;i++) id[i] = i;
-    auto bind_cmp = bind(&PLL::cmp, this, _1, _2);
-    sort(id.begin() + 1, id.end(),bind_cmp);
+    vector<pair<int, int>> node(n+1);
+    for(int i=1;i<=n;i++) node[i] = make_pair(edg[i].size(), i);
+    sort(node.rbegin(), node.rend()-1);
+    for(int i=1;i<=n;i++) id[i] = node[i].second;
+//    for(int i=1;i<=n; i++)
+//        cout<<i<<" "<<id[i]<<" "<<edg[id[i]].size()<<endl;
+//    exit(0);
     for(int i=1;i<=n;i++){
         //cout<<"what "<<i<<endl;
         prunedBFS(i);
@@ -149,7 +153,7 @@ int PLL::query_distance(int u, int v)
         }
         else b++;
     }
-    return ans;
+    return ans==inf?-1:ans;
 }
 
 void PLL::test()
@@ -160,23 +164,23 @@ void PLL::test()
             assert(query_distance(i, j) == query_distance(j, i));
         }
     }
-//    for(int i=1;i<=n;i++){
-//        for(int j=i+1;j<=n;j++){
-//            cout<<query_distance(i, j)<<endl;
-//        }
-//    }
-    scanf("%d", &q);
-    while(q --){
-        scanf("%d %d", &u, &v);
-        cout<<query_distance(u, v)<<endl;
+    for(int i=1;i<=n;i++){
+        for(int j=1;j<=n;j++){
+            cout<<i<<" "<<j<<" "<<query_distance(i, j)<<endl;
+        }
     }
+//    scanf("%d", &q);
+//    while(q --){
+//        scanf("%d %d", &u, &v);
+//        cout<<query_distance(u, v)<<endl;
+//    }
 }
 
 int main()
 {
 #ifdef local_test
-    freopen("in.txt", "r", stdin);
-    freopen("out.txt", "w", stdout);
+    freopen("../graph.txt", "r", stdin);
+    freopen("../pll.out", "w", stdout);
 #endif // local_test
     PLL pll;
     pll.graph_init();
