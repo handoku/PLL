@@ -4,9 +4,10 @@
 #include <cstring>
 #include <queue>
 #include <set>
-#include <map>
+#include <unordered_map>
 #include <sys/time.h>
 #include <cassert>
+#include <fstream>
 #include <functional>
 
 using namespace std;
@@ -19,42 +20,55 @@ class PLL
 public:
     PLL(){};
     void init(int n); //init;
-    void graph_init(); //get graph;
+    void graph_init();
+    void graph_init(ifstream &ifs); //get graph;
     void preparing(); //get index;
     void prunedBFS(int vk); //BFS with prune;
     int query_for_pruning(int u, int v); //query_1
     int query_distance(int u, int v); //get distance answer;
-    void test(); //just for test;
+    void test(ofstream &ofs); //just for test;
 private:
     int n, m;
-    vector<vector<int>> edg; // storing graph
-    vector<vector<pair<int, int8_t>>> label; // index
+    vector<vector<pair<int, int>>> edg; // storing graph : to, cost
+    vector<vector<pair<int, int>>> label; // index
     vector<int> id; // get vertex according to position
     vector<int> _inv_id; // get vertex's id
     vector<int> dis; // storing current distance in BFS;
-    vector<int> vis; //flag denoting if vertex has been visited
+    vector<int> vis;
     vector<int> len_from_vk;
 };
 
 void PLL::init(int n)
 {
-    edg.resize(n+1, vector<int>(0));
-    label.resize(n+1, vector<pair<int, int8_t>>(0));
+    edg.resize(n+1, vector<pair<int, int>>(0));
+    label.resize(n+1, vector<pair<int, int>>(0));
     id.resize(n+1);
     _inv_id.resize(n+1);
-    dis.resize(n+1,inf);
-    vis.resize(n+1,0);
+    dis.resize(n+1, inf);
+    vis.resize(n+1, 0);
     len_from_vk.resize(n+1, inf);
 }
 
 void PLL::graph_init()
 {
-    int u, v;
+    int u, v, w;
     scanf("%d %d", &n, &m);
     init(n);
     for(int i=0;i<m;i++){
-        scanf("%d %d", &u, &v);
-        edg[u].push_back(v); edg[v].push_back(u);
+        scanf("%d %d %d", &u, &v, &w);
+        edg[u].emplace_back(v, w); edg[v].emplace_back(u, w);
+    }
+}
+
+void PLL::graph_init(ifstream &ifs)
+{
+    assert(ifs);
+    int u, v, w;
+    ifs>>n>>m;
+    init(n);
+    for(int i=0;i<m;i++){
+        ifs>>u>>v>>w;
+        edg[u].emplace_back(v, w); edg[v].emplace_back(u, w);
     }
 }
 
@@ -88,27 +102,31 @@ void PLL::preparing()
 void PLL::prunedBFS(int vk_idx)
 {
     int vk = id[vk_idx];
-    queue<int> q;
-    q.push(vk);
+    priority_queue<pair<int, int>,vector<pair<int, int> >,greater<pair<int, int> > > q;
     vis[vk] = vk_idx;
     dis[vk] = 0;
+    q.push(make_pair(dis[vk], vk));
     for(int i = 0; i<(int)label[vk].size(); i++){
         len_from_vk[label[vk][i].first] = label[vk][i].second;
     }
     while(!q.empty()){
-        int u = q.front(); q.pop();
+        int u = q.top().second;
+        int dist = q.top().first;
+        q.pop();
+        if(dis[u] < dist) continue;
         if(query_for_pruning(vk, u) <= dis[u] && _inv_id[u] != vk_idx) {
             cnt ++; // calculate how many times we have pruned
             continue;
         }
-        label[u].emplace_back(vk_idx, dis[u]);
+        label[u].emplace_back(vk, dis[u]);
         for(int i=0;i<(int)edg[u].size(); i++){
-            int v = edg[u][i];
+            int v = edg[u][i].first, w = edg[u][i].second;
             if(_inv_id[v] < vk_idx) continue;
-            if(vis[v] != vk_idx){
-                dis[v] = dis[u] + 1;
+            //if(vis[v] != vk_idx){
+            if(dis[v] > dis[u] + w || vis[v] != vk_idx){
                 vis[v] = vk_idx;
-                q.push(v);
+                dis[v] = dis[u] + w;
+                q.push(make_pair(dis[v], v));
             }
         }
     }
@@ -132,37 +150,24 @@ int PLL::query_distance(int u, int v)
     assert(1<=u&&u<=n&&1<=v&&v<=n);
     if(_inv_id[u] < _inv_id[v]) swap(u, v);
     if(u == v) return 0;
-    int a=0, b=0;
+    unordered_map<int, int> dis_u_;
+    for (int i=0;i<(int)label[u].size(); i++){
+        dis_u_[label[u][i].first] = label[u][i].second;
+    }
     int ans = inf;
-    while(a < (int)label[u].size() && b < (int)label[v].size()){
-        int ida = label[u][a].first, idb = label[v][b].first;
-        int dis_u_a = label[u][a].second, dis_v_b = label[v][b].second;
-
-        if(id[ida] == v) return dis_u_a;
-        if(id[idb] == u) return dis_v_b;
-        if(ida == idb){
-            ans = min(ans, dis_u_a + dis_v_b);
-            a ++;
-            b ++;
+    for (int i=0; i<(int)label[v].size(); i++){
+        if (dis_u_.count(label[v][i].first)){
+            ans = min(ans, dis_u_[label[v][i].first] + label[v][i].second);
         }
-        else if(ida <= idb){
-            a++;
-        }
-        else b++;
     }
-    while(a < (int)label[u].size()){
-        int ida = label[u][a].first, dis_u_a = label[u][a].second;
-        if(id[ida] == v) return dis_u_a;
-        a++;
-    }
-    return ans==inf?-1:ans;
+    return ans;
 }
 
-void PLL::test()
+void PLL::test(ofstream &ofs)
 {
     for(int i=1;i<=n;i++){
         for(int j=1;j<=n;j++){
-            cout<<i<<" "<<j<<" "<<query_distance(i, j)<<endl;
+            ofs<<i<<" "<<j<<" "<<query_distance(i, j)<<endl;
         }
     }
 //    int q, u, v;
@@ -176,19 +181,34 @@ void PLL::test()
 int main()
 {
 #ifdef local_test
-    freopen("../graph.txt", "r", stdin);
-    freopen("../pll.out", "w", stdout);
 #endif // local_test
-    PLL pll;
-    pll.graph_init();
-    timeval t1, t2;
 
-    gettimeofday(&t1, NULL);
-    pll.preparing();
-    gettimeofday(&t2, NULL);
 
-    double indexing_time = t2.tv_sec - t1.tv_sec + (t2.tv_usec - t1.tv_usec)/1000000.0;
-    cerr<<"index_time: "<<indexing_time<<" s"<<endl;
+    for (int x=0;x<6;x++){
+        char c = x + '0';
+        string str = "../graph_";
+        str += c;
+        str += ".txt";
+        ifstream ifs;
+        ifs.open(str);
+        PLL pll;
+        pll.graph_init(ifs);
+        timeval t1, t2;
+
+        gettimeofday(&t1, NULL);
+        pll.preparing();
+        gettimeofday(&t2, NULL);
+
+        double indexing_time = t2.tv_sec - t1.tv_sec + (t2.tv_usec - t1.tv_usec)/1000000.0;
+        cout<<"index_time: "<<indexing_time<<" s"<<endl;
+
+        str = "../pll_";
+        str += c;
+        str += ".out";
+//        ofstream ofs(str);
+//        pll.test(ofs);
+        cout<<"ok graph_"<<x<<endl<<endl;
+    }
     //pll.test();
     return 0;
 }
@@ -209,38 +229,38 @@ query[q]
 
 case 1:
 7 7
-1 2
-2 3
-2 4
-2 6
-4 5
-4 7
-6 7
+1 2 1
+2 3 3
+2 4 1
+2 6 7
+4 5 2
+4 7 5
+6 7 4
 2
 1 7
 3 7
 
 case 2:
 12 19
-1 4
-1 6
-1 7
-1 8
-1 9
-1 10
-1 12
-2 5
-2 10
-2 8
-3 11
-3 12
-4 5
-4 6
-5 8
-6 7
-7 9
-9 12
-10 11
+1 4 1
+1 6 2
+1 7 3
+1 8 1
+1 9 2
+1 10 3
+1 12 1
+2 5 2
+2 10 3
+2 8 1
+3 11 2
+3 12 3
+4 5 1
+4 6 2
+5 8 3
+6 7 1
+7 9 2
+9 12 3
+10 11 4
 
 2
 1 3
